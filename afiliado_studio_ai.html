@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afiliado Studio AI</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Fabric.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+    <!-- Tailwind Config for Theme -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        bgDark: '#09090b', // Preto profundo
+                        bgPanel: '#18181b', // Grafite escuro
+                        bgHover: '#27272a',
+                        electricBlue: '#2563eb', // Azul elétrico
+                        electricBlueHover: '#1d4ed8',
+                        textMain: '#f4f4f5',
+                        textMuted: '#a1a1aa',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #09090b;
+            color: #f4f4f5;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent full page scroll, handle inside containers */
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #18181b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563eb; 
+        }
+
+        .nav-item.active {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: #3b82f6;
+            border-right: 3px solid #3b82f6;
+        }
+
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Toast Animation */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+        .toast {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+        .toast.hiding {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+
+        /* Canvas Wrapper for Responsiveness */
+        .canvas-container-wrapper {
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1 / 1;
+            background-color: #18181b;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #3f3f46;
+        }
+        .canvas-container {
+            margin: 0 auto;
+        }
+        
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="flex h-screen antialiased selection:bg-electricBlue selection:text-white">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-bgPanel flex flex-col border-r border-zinc-800 transition-all duration-300 z-20 hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-zinc-800">
+            <i data-lucide="sparkles" class="text-electricBlue mr-2"></i>
+            <span class="font-bold text-lg tracking-wide">Afiliado Studio AI</span>
+        </div>
+        <nav class="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto">
+            <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-item flex items-center w-full px-3 py-3 rounded-lg text-textMuted hover:bg-bgHover hover:text-textMain transition-colors">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                Dashboard
+            </button>
+            <button onclick="navigate('products')" id="nav-products" class="nav-item flex items-center w-full px-3 py-3 rounded-lg text-textMuted hover:bg-bgHover hover:text-textMain transition-colors">
+                <i data-lucide="package" class="w-5 h-5 mr-3"></i>
+                Produtos
+            </button>
+            <button onclick="navigate('ai')" id="nav-ai" class="nav-item flex items-center w-full px-3 py-3 rounded-lg text-textMuted hover:bg-bgHover hover:text-textMain transition-colors">
+                <i data-lucide="bot" class="w-5 h-5 mr-3"></i>
+                Gerador IA
+            </button>
+            <button onclick="navigate('editor')" id="nav-editor" class="nav-item flex items-center w-full px-3 py-3 rounded-lg text-textMuted hover:bg-bgHover hover:text-textMain transition-colors">
+                <i data-lucide="image" class="w-5 h-5 mr-3"></i>
+                Editor Visual
+            </button>
+            <button onclick="navigate('vitrine')" id="nav-vitrine" class="nav-item flex items-center w-full px-3 py-3 rounded-lg text-textMuted hover:bg-bgHover hover:text-textMain transition-colors">
+                <i data-lucide="store" class="w-5 h-5 mr-3"></i>
+                Vitrine HTML
+            </button>
+        </nav>
+        <div class="p-4 border-t border-zinc-800 text-xs text-zinc-500 text-center">
+            Afiliado Studio AI v1.0<br>SaaS Gratuito
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 h-16 bg-bgPanel border-b border-zinc-800 flex items-center justify-between px-4 z-30">
+        <div class="flex items-center">
+            <i data-lucide="sparkles" class="text-electricBlue w-5 h-5 mr-2"></i>
+            <span class="font-bold">Studio AI</span>
+        </div>
+        <button id="mobile-menu-btn" class="text-textMain">
+            <i data-lucide="menu"></i>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-bgDark pt-16 md:pt-0 relative">
+        <!-- Auth Loader Overlay -->
+        <div id="auth-overlay" class="absolute inset-0 bg-bgDark z-50 flex flex-col items-center justify-center">
+            <div class="loader mb-4 w-10 h-10"></div>
+            <p class="text-zinc-400">Conectando ao sistema seguro...</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-7xl mx-auto">
+            
+            <!-- VIEW: DASHBOARD -->
+            <section id="view-dashboard" class="view-section hidden space-y-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-textMain mb-2">Visão Geral</h1>
+                    <p class="text-textMuted">Acompanhe seu desempenho e organize sua produção de conteúdo.</p>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-electricBlue">
+                            <i data-lucide="package" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-textMuted">Total Produtos</p>
+                            <p id="stat-products" class="text-2xl font-bold">0</p>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
+                            <i data-lucide="image" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-textMuted">Artes Criadas</p>
+                            <p id="stat-arts" class="text-2xl font-bold">0</p>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                            <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-textMuted">Meta Diária</p>
+                            <p class="text-2xl font-bold">3 <span class="text-sm font-normal text-zinc-500">artes</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    <!-- Checklist -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i data-lucide="check-square" class="w-5 h-5 text-electricBlue"></i> Checklist de Produção</h2>
+                        <ul class="space-y-3">
+                            <li class="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+                                <input type="checkbox" class="w-5 h-5 rounded border-zinc-600 text-electricBlue focus:ring-electricBlue bg-zinc-900 cursor-pointer">
+                                <span>Cadastrar novos produtos em alta</span>
+                            </li>
+                            <li class="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+                                <input type="checkbox" class="w-5 h-5 rounded border-zinc-600 text-electricBlue focus:ring-electricBlue bg-zinc-900 cursor-pointer">
+                                <span>Gerar prompts e copys com IA</span>
+                            </li>
+                            <li class="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+                                <input type="checkbox" class="w-5 h-5 rounded border-zinc-600 text-electricBlue focus:ring-electricBlue bg-zinc-900 cursor-pointer">
+                                <span>Criar artes no Editor Visual</span>
+                            </li>
+                            <li class="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
+                                <input type="checkbox" class="w-5 h-5 rounded border-zinc-600 text-electricBlue focus:ring-electricBlue bg-zinc-900 cursor-pointer">
+                                <span>Atualizar Vitrine HTML</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Calendar mock -->
+                    <div class="glass-panel rounded-xl p-6">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5 text-electricBlue"></i> Planejamento da Semana</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 text-center">
+                                    <p class="text-xs font-bold text-electricBlue">HOJE</p>
+                                    <p class="text-xl font-bold">12</p>
+                                </div>
+                                <div class="flex-1 bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">
+                                    <p class="font-medium">Campanha Shopee Ofertas</p>
+                                    <p class="text-sm text-zinc-400">Criar 3 artes formato Instagram.</p>
+                                </div>
+                            </div>
+                             <div class="flex items-start gap-4 opacity-50">
+                                <div class="w-12 text-center">
+                                    <p class="text-xs font-bold text-zinc-500">AMANHÃ</p>
+                                    <p class="text-xl font-bold">13</p>
+                                </div>
+                                <div class="flex-1 bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">
+                                    <p class="font-medium">Atualização de Catálogo</p>
+                                    <p class="text-sm text-zinc-400">Adicionar 10 produtos novos na vitrine.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: PRODUCTS -->
+            <section id="view-products" class="view-section hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-textMain mb-2">Meus Produtos</h1>
+                        <p class="text-textMuted">Cadastre os links de afiliado para utilizar na IA e Vitrine.</p>
+                    </div>
+                    <button onclick="document.getElementById('product-modal').classList.remove('hidden')" class="bg-electricBlue hover:bg-electricBlueHover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-medium">
+                        <i data-lucide="plus" class="w-5 h-5"></i> Novo Produto
+                    </button>
+                </div>
+
+                <!-- Products Grid -->
+                <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+                    <!-- Cards dinâmicos injetados aqui -->
+                    <div class="col-span-full text-center py-12 text-zinc-500 hidden" id="no-products-msg">
+                        <i data-lucide="package-open" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                        <p>Nenhum produto cadastrado ainda.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: AI GENERATOR -->
+            <section id="view-ai" class="view-section hidden space-y-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-textMain mb-2">Gerador Inteligente (Gemini)</h1>
+                    <p class="text-textMuted">Crie prompts profissionais, legendas, CTAs e hashtags com um clique.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Config Panel -->
+                    <div class="glass-panel p-6 rounded-xl col-span-1 h-fit">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="settings-2" class="w-5 h-5 text-electricBlue"></i> Configurações</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-zinc-400 mb-1">Produto</label>
+                                <select id="ai-product-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-electricBlue transition-colors">
+                                    <option value="">Selecione um produto cadastrado...</option>
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-zinc-400 mb-1">Estilo Visual</label>
+                                <select id="ai-style-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-electricBlue transition-colors">
+                                    <option value="Premium">Premium (Sofisticado, estúdio)</option>
+                                    <option value="Oferta">Oferta (Promocional, preço em destaque)</option>
+                                    <option value="Minimalista">Minimalista (Limpo, elegante)</option>
+                                    <option value="Instagram">Instagram (Post comercial chamativo)</option>
+                                    <option value="Story">Story (Vertical dinâmico)</option>
+                                    <option value="Lifestyle">Lifestyle (Produto em ambiente realista)</option>
+                                    <option value="Catálogo">Catálogo (Fundo profissional)</option>
+                                    <option value="Pinterest">Pinterest (Estético e moderno)</option>
+                                    <option value="Comparativo">Comparativo (Características em destaque)</option>
+                                    <option value="Criativo viral">Criativo viral (Composição curiosa/diferenciada)</option>
+                                </select>
+                            </div>
+
+                            <button id="btn-generate-ai" onclick="generateAIContent()" class="w-full bg-electricBlue hover:bg-electricBlueHover text-white py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 mt-4">
+                                <i data-lucide="zap" class="w-5 h-5"></i> Gerar Material Completo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="col-span-1 lg:col-span-2 space-y-6">
+                        <!-- Loading State -->
+                        <div id="ai-loading" class="hidden glass-panel p-12 rounded-xl flex flex-col items-center justify-center text-center">
+                            <div class="loader mb-4 w-12 h-12"></div>
+                            <h3 class="font-bold text-lg">A Inteligência Artificial está trabalhando...</h3>
+                            <p class="text-zinc-400 text-sm mt-2">Criando prompt detalhado, legendas persuasivas e hashtags otimizadas.</p>
+                        </div>
+
+                        <!-- Content State -->
+                        <div id="ai-results" class="hidden space-y-6">
+                            <!-- Prompt -->
+                            <div class="glass-panel p-6 rounded-xl">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h3 class="font-bold text-lg text-electricBlue flex items-center gap-2"><i data-lucide="terminal-square"></i> Prompt para Gerador de Imagem (Inglês)</h3>
+                                    <button onclick="copyToClipboard('ai-prompt-text')" class="text-zinc-400 hover:text-white bg-zinc-800 p-2 rounded-md transition-colors tooltip"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                </div>
+                                <p id="ai-prompt-text" class="text-zinc-300 text-sm bg-zinc-900 p-4 rounded-lg font-mono leading-relaxed select-all">...</p>
+                                <p class="text-xs text-zinc-500 mt-2">Copie e cole este prompt no Midjourney, DALL-E, Leonardo AI ou seu gerador favorito.</p>
+                            </div>
+
+                            <!-- Legendas -->
+                            <div class="glass-panel p-6 rounded-xl">
+                                <h3 class="font-bold text-lg flex items-center gap-2 mb-4"><i data-lucide="message-square-text"></i> Legendas Publicitárias</h3>
+                                <div id="ai-captions-container" class="space-y-3">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- CTAs -->
+                                <div class="glass-panel p-6 rounded-xl">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="megaphone"></i> Chamadas (CTAs)</h3>
+                                    </div>
+                                    <ul id="ai-ctas-list" class="space-y-2 text-sm text-zinc-300 bg-zinc-900 p-4 rounded-lg">
+                                        <!-- Populated dynamically -->
+                                    </ul>
+                                </div>
+
+                                <!-- Hashtags -->
+                                <div class="glass-panel p-6 rounded-xl">
+                                     <div class="flex justify-between items-center mb-3">
+                                        <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="hash"></i> Hashtags</h3>
+                                        <button onclick="copyToClipboard('ai-hashtags-text')" class="text-zinc-400 hover:text-white bg-zinc-800 p-2 rounded-md transition-colors"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                    </div>
+                                    <p id="ai-hashtags-text" class="text-sm text-blue-400 bg-zinc-900 p-4 rounded-lg leading-relaxed tracking-wide">
+                                        <!-- Populated dynamically -->
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: VISUAL EDITOR -->
+            <section id="view-editor" class="view-section hidden flex-col h-[calc(100vh-8rem)]">
+                <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-textMain mb-1">Editor Visual</h1>
+                        <p class="text-textMuted text-sm">Monte sua arte publicitária final arrastando elementos.</p>
+                    </div>
+                    
+                    <div class="flex gap-2 flex-wrap">
+                        <select id="editor-product-select" onchange="loadProductImageToEditor()" class="bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-sm text-white focus:outline-none">
+                            <option value="">Carregar imagem de um produto...</option>
+                        </select>
+                        <button onclick="downloadDesign()" class="bg-electricBlue hover:bg-electricBlueHover text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+                            <i data-lucide="download" class="w-4 h-4"></i> Exportar PNG
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+                    <!-- Toolbar -->
+                    <div class="lg:w-16 flex lg:flex-col gap-2 bg-bgPanel p-2 rounded-xl border border-zinc-800 shrink-0 overflow-x-auto lg:overflow-visible">
+                        <button onclick="addText()" class="p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white flex justify-center items-center tooltip" title="Adicionar Texto">
+                            <i data-lucide="type" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="addRect()" class="p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white flex justify-center items-center tooltip" title="Adicionar Retângulo (Etiqueta)">
+                            <i data-lucide="square" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="addCircle()" class="p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white flex justify-center items-center tooltip" title="Adicionar Círculo (Selo de Desconto)">
+                            <i data-lucide="circle" class="w-5 h-5"></i>
+                        </button>
+                        <div class="w-px h-8 lg:w-8 lg:h-px bg-zinc-700 mx-auto my-1 shrink-0"></div>
+                        <button onclick="uploadImageToCanvas()" class="p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white flex justify-center items-center tooltip" title="Fazer Upload de Imagem">
+                            <i data-lucide="upload" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="deleteSelected()" class="p-3 rounded-lg bg-red-900/30 hover:bg-red-900/60 text-red-400 flex justify-center items-center tooltip mt-auto lg:mt-auto" title="Apagar Selecionado">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Hidden File Input for Canvas Upload -->
+                    <input type="file" id="canvas-image-upload" accept="image/*" class="hidden">
+
+                    <!-- Canvas Area -->
+                    <div class="flex-1 bg-zinc-900 rounded-xl border border-zinc-800 flex items-center justify-center p-4 overflow-auto">
+                        <div class="canvas-container-wrapper relative shadow-2xl">
+                             <canvas id="fabric-canvas"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Properties Panel -->
+                    <div class="lg:w-64 bg-bgPanel p-4 rounded-xl border border-zinc-800 flex flex-col gap-4 overflow-y-auto hidden md:flex">
+                        <h3 class="font-bold border-b border-zinc-700 pb-2 mb-2 text-sm">Propriedades</h3>
+                        <div id="no-selection-msg" class="text-zinc-500 text-xs text-center py-4">Selecione um elemento no canvas.</div>
+                        
+                        <div id="color-picker-container" class="hidden flex flex-col gap-2">
+                            <label class="text-xs text-zinc-400">Cor (Preenchimento)</label>
+                            <input type="color" id="element-color" class="w-full h-8 cursor-pointer rounded border-0 bg-transparent">
+                        </div>
+                        
+                         <div id="text-edit-container" class="hidden flex flex-col gap-2 mt-2">
+                            <label class="text-xs text-zinc-400">Editar Texto</label>
+                            <textarea id="element-text" rows="2" class="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-sm text-white resize-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: VITRINE -->
+            <section id="view-vitrine" class="view-section hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-textMain mb-2">Sua Vitrine (Showcase)</h1>
+                        <p class="text-textMuted">Exporte seus produtos para uma página HTML gratuita e limpa para hospedar na Vercel/Netlify.</p>
+                    </div>
+                    <button onclick="exportVitrineHTML()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors font-bold shadow-lg shadow-green-900/20">
+                        <i data-lucide="code-2" class="w-5 h-5"></i> Gerar Código da Vitrine
+                    </button>
+                </div>
+                
+                <div class="glass-panel rounded-xl p-6 border border-zinc-800">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i data-lucide="eye"></i> Pré-visualização dos Produtos Inclusos</h3>
+                    <div id="vitrine-preview-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <!-- Injetado dinamicamente -->
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Modal: Adicionar Produto -->
+    <div id="product-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-bgPanel w-full max-w-md rounded-2xl border border-zinc-700 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+                <h2 class="text-xl font-bold" id="product-modal-title">Novo Produto</h2>
+                <button onclick="closeProductModal()" class="text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <form id="product-form" class="space-y-4">
+                    <input type="hidden" id="prod-id">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-1">Nome do Produto</label>
+                        <input type="text" id="prod-name" required class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-electricBlue" placeholder="Ex: Fone Bluetooth XYZ">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-1">Link de Afiliado</label>
+                        <input type="url" id="prod-link" required class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-electricBlue" placeholder="https://shopee.com.br/...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-1">Preço (R$)</label>
+                        <input type="text" id="prod-price" required class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-electricBlue" placeholder="99,90">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-1">URL da Imagem</label>
+                        <input type="url" id="prod-image" required class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-electricBlue" placeholder="https://...">
+                        <p class="text-xs text-zinc-500 mt-1">Cole o link da imagem original do produto.</p>
+                    </div>
+                </form>
+            </div>
+            <div class="p-6 border-t border-zinc-800 flex justify-end gap-3">
+                <button onclick="closeProductModal()" class="px-4 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800 transition-colors font-medium">Cancelar</button>
+                <button onclick="saveProduct()" class="px-4 py-2 bg-electricBlue hover:bg-electricBlueHover text-white rounded-lg transition-colors font-medium flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i> Salvar Produto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Export Code -->
+    <div id="code-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-bgPanel w-full max-w-3xl rounded-2xl border border-zinc-700 shadow-2xl flex flex-col h-[80vh]">
+             <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="code" class="text-green-500"></i> Código HTML da Vitrine</h2>
+                <button onclick="document.getElementById('code-modal').classList.add('hidden')" class="text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="flex-1 p-6 overflow-hidden flex flex-col">
+                <p class="text-sm text-zinc-400 mb-4">Copie o código abaixo, salve em um arquivo <code>index.html</code> e hospede gratuitamente na Vercel, Netlify ou GitHub Pages.</p>
+                <textarea id="export-code-area" readonly class="flex-1 w-full bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-green-400 font-mono text-xs resize-none focus:outline-none"></textarea>
+            </div>
+            <div class="p-6 border-t border-zinc-800 flex justify-end">
+                <button onclick="copyToClipboard('export-code-area')" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-bold flex items-center gap-2">
+                    <i data-lucide="copy" class="w-5 h-5"></i> Copiar Código Completo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Variables Handling
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'afiliado-studio-ai-default';
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                // Mock config for local structure if needed, though this relies on the real injected env
+            };
+        } catch (e) {
+            console.error("Erro ao carregar config firebase", e);
+        }
+
+        // State
+        let app, db, auth, currentUser;
+        let globalProducts = [];
+        let canvas;
+        const GEMINI_API_KEY = ""; // Injected by canvas env automatically
+
+        // Initializer
+        async function initApp() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    // Authentication
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            document.getElementById('auth-overlay').classList.add('hidden');
+                            setupRealtimeListeners();
+                        }
+                    });
+                } else {
+                    showToast("Erro: Configuração do banco de dados não encontrada.", "error");
+                    document.getElementById('auth-overlay').classList.add('hidden');
+                }
+
+                // UI Initialization
+                lucide.createIcons();
+                initFabric();
+                navigate('dashboard'); // Start on Dashboard
+                
+                // Mobile menu
+                document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                    const sidebar = document.querySelector('aside');
+                    sidebar.classList.toggle('hidden');
+                    sidebar.classList.toggle('absolute');
+                    sidebar.classList.toggle('inset-y-0');
+                    sidebar.classList.toggle('left-0');
+                    sidebar.classList.toggle('shadow-2xl');
+                });
+
+            } catch (error) {
+                console.error("Initialization error:", error);
+                showToast("Erro ao inicializar aplicativo.", "error");
+            }
+        }
+
+        // Toast Notification System
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
+                type === 'success' ? 'bg-green-600 text-white' : 
+                type === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+            }`;
+            
+            const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info';
+            toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i> ${message}`;
+            
+            container.appendChild(toast);
+            lucide.createIcons({root: toast});
+            
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Navigation
+        window.navigate = function(viewId) {
+            // Update Menu
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${viewId}`).classList.add('active');
+
+            // Update Views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            document.getElementById(`view-${viewId}`).classList.add('flex'); // Keep flex if needed
+
+            if(viewId !== 'editor') {
+                 document.getElementById(`view-${viewId}`).classList.remove('flex'); // reset flex for non-editor
+            }
+
+            // Mobile specific behavior
+            if (window.innerWidth < 768) {
+                const sidebar = document.querySelector('aside');
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('absolute', 'inset-y-0', 'left-0', 'shadow-2xl');
+            }
+
+            // Refresh specific view needs
+            if (viewId === 'editor') {
+                if (canvas) {
+                    // Slight delay to ensure DOM is visible before calculating size
+                    setTimeout(() => resizeCanvas(), 50);
+                }
+            }
+        }
+
+        // Firestore Data
+        function setupRealtimeListeners() {
+            if (!currentUser) return;
+
+            const productsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'products');
+            
+            onSnapshot(query(productsRef), (snapshot) => {
+                globalProducts = [];
+                snapshot.forEach(doc => {
+                    globalProducts.push({ id: doc.id, ...doc.data() });
+                });
+                updateProductsUI();
+                updateDashboardStats();
+                populateProductSelects();
+            }, (error) => {
+                console.error("Error listening to products:", error);
+                showToast("Erro ao carregar dados.", "error");
+            });
+        }
+
+        function updateDashboardStats() {
+            document.getElementById('stat-products').textContent = globalProducts.length;
+        }
+
+        function updateProductsUI() {
+            const grid = document.getElementById('products-grid');
+            const msg = document.getElementById('no-products-msg');
+            
+            // Keep the empty message element, remove others
+            Array.from(grid.children).forEach(child => {
+                if (child.id !== 'no-products-msg') grid.removeChild(child);
+            });
+
+            if (globalProducts.length === 0) {
+                msg.classList.remove('hidden');
+                return;
+            }
+            
+            msg.classList.add('hidden');
+
+            globalProducts.forEach(product => {
+                const card = document.createElement('div');
+                card.className = "bg-bgPanel border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors group flex flex-col";
+                card.innerHTML = `
+                    <div class="h-48 bg-zinc-800 relative overflow-hidden flex items-center justify-center">
+                        <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x400/18181b/3f3f46?text=Sem+Imagem'">
+                        <div class="absolute top-2 right-2 flex gap-1">
+                            <button onclick="editProduct('${product.id}')" class="bg-black/50 p-1.5 rounded text-zinc-300 hover:text-white hover:bg-black/80 backdrop-blur tooltip"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                            <button onclick="deleteProduct('${product.id}')" class="bg-black/50 p-1.5 rounded text-red-400 hover:text-red-500 hover:bg-black/80 backdrop-blur"><i data-lucide="trash" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1">
+                        <h3 class="font-bold text-sm text-textMain line-clamp-2 mb-2 flex-1">${product.name}</h3>
+                        <div class="flex justify-between items-end mt-auto">
+                            <span class="text-electricBlue font-bold">R$ ${product.price}</span>
+                            <a href="${product.link}" target="_blank" class="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded hover:bg-zinc-700 flex items-center gap-1">
+                                <i data-lucide="external-link" class="w-3 h-3"></i> Abrir
+                            </a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons({root: grid});
+            updateVitrinePreview();
+        }
+
+        function populateProductSelects() {
+            const aiSelect = document.getElementById('ai-product-select');
+            const editorSelect = document.getElementById('editor-product-select');
+            
+            const optionsHtml = '<option value="">Selecione um produto...</option>' + 
+                globalProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                
+            aiSelect.innerHTML = optionsHtml;
+            editorSelect.innerHTML = optionsHtml;
+        }
+
+        // Product Management
+        window.closeProductModal = function() {
+            document.getElementById('product-modal').classList.add('hidden');
+            document.getElementById('product-form').reset();
+            document.getElementById('prod-id').value = '';
+            document.getElementById('product-modal-title').textContent = 'Novo Produto';
+        }
+
+        window.saveProduct = async function() {
+            if (!currentUser) return;
+            
+            const idInput = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value;
+            const link = document.getElementById('prod-link').value;
+            const price = document.getElementById('prod-price').value;
+            const imageUrl = document.getElementById('prod-image').value;
+
+            if (!name || !link || !price || !imageUrl) {
+                showToast('Preencha todos os campos.', 'error');
+                return;
+            }
+
+            const docId = idInput || crypto.randomUUID();
+            const productData = {
+                name, link, price, imageUrl,
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'products', docId);
+                await setDoc(docRef, productData);
+                showToast(idInput ? 'Produto atualizado!' : 'Produto salvo!');
+                closeProductModal();
+            } catch (error) {
+                console.error("Error saving product:", error);
+                showToast('Erro ao salvar.', 'error');
+            }
+        }
+
+        window.deleteProduct = async function(id) {
+            if (!currentUser) return;
+            // Removed alert/confirm as per instructions. Using direct action with toast for simple apps, 
+            // in a larger app we'd build a custom modal.
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'products', id));
+                showToast('Produto excluído.');
+            } catch (error) {
+                console.error("Error deleting:", error);
+                showToast('Erro ao excluir.', 'error');
+            }
+        }
+
+        window.editProduct = function(id) {
+            const product = globalProducts.find(p => p.id === id);
+            if (!product) return;
+            
+            document.getElementById('prod-id').value = product.id;
+            document.getElementById('prod-name').value = product.name;
+            document.getElementById('prod-link').value = product.link;
+            document.getElementById('prod-price').value = product.price;
+            document.getElementById('prod-image').value = product.imageUrl;
+            
+            document.getElementById('product-modal-title').textContent = 'Editar Produto';
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        // Gemini API Integration
+        window.generateAIContent = async function() {
+            const productId = document.getElementById('ai-product-select').value;
+            const style = document.getElementById('ai-style-select').value;
+            
+            if (!productId) {
+                showToast("Selecione um produto primeiro.", "error");
+                return;
+            }
+
+            const product = globalProducts.find(p => p.id === productId);
+            if (!product) return;
+
+            document.getElementById('btn-generate-ai').disabled = true;
+            document.getElementById('btn-generate-ai').innerHTML = '<div class="loader w-5 h-5 mr-2 border-t-white"></div> Gerando...';
+            document.getElementById('ai-results').classList.add('hidden');
+            document.getElementById('ai-loading').classList.remove('hidden');
+
+            const systemPrompt = `Você é um diretor de arte e copywriter especialista em marketing de afiliados (Shopee/Mercado Livre).
+Regras estritas:
+1. Retorne APENAS um objeto JSON válido, sem markdown, sem blocos de código em volta.
+2. Formato obrigatório do JSON:
+{
+  "prompt": "String com o prompt super detalhado em INGLÊS (para Midjourney/DALL-E) focando no produto e no estilo solicitado. Use termos fotográficos e de iluminação.",
+  "captions": ["Legenda persuasiva 1 (português)", "Legenda 2", "Legenda 3"],
+  "hashtags": ["#tag1", "#tag2", ... 10 tags],
+  "ctas": ["CTA curto 1", "CTA 2", ... 5 CTAs]
+}`;
+            const userPrompt = `Produto: ${product.name}
+Preço: R$ ${product.price}
+Estilo da imagem desejada: ${style}
+Gere os dados de marketing para este produto seguindo o JSON especificado.`;
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+                
+                // Exponencial backoff wrapper
+                const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+                    for (let i = 0; i < retries; i++) {
+                        const res = await fetch(url, options);
+                        if (res.ok) return res;
+                        if (res.status === 429) {
+                            await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+                            continue;
+                        }
+                        throw new Error(`API Error: ${res.status}`);
+                    }
+                    throw new Error("Max retries reached");
+                };
+
+                const response = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+
+                const data = await response.json();
+                const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (resultText) {
+                    const parsed = JSON.parse(resultText);
+                    displayAIResults(parsed);
+                    
+                    // Increment "Artes Criadas" stat locally (demo purposes)
+                    const statArts = document.getElementById('stat-arts');
+                    statArts.textContent = parseInt(statArts.textContent) + 1;
+                } else {
+                    throw new Error("Resposta inválida da API");
+                }
+            } catch (error) {
+                console.error("Gemini Error:", error);
+                showToast("Erro ao gerar conteúdo. Tente novamente.", "error");
+            } finally {
+                document.getElementById('btn-generate-ai').disabled = false;
+                document.getElementById('btn-generate-ai').innerHTML = '<i data-lucide="zap" class="w-5 h-5"></i> Gerar Material Completo';
+                document.getElementById('ai-loading').classList.add('hidden');
+                lucide.createIcons();
+            }
+        }
+
+        function displayAIResults(data) {
+            document.getElementById('ai-prompt-text').textContent = data.prompt;
+            
+            const captionsContainer = document.getElementById('ai-captions-container');
+            captionsContainer.innerHTML = data.captions.map((cap, i) => `
+                <div class="bg-zinc-900 p-3 rounded-lg border border-zinc-800 flex justify-between gap-3">
+                    <p class="text-sm text-zinc-300 flex-1" id="cap-${i}">${cap}</p>
+                    <button onclick="copyToClipboard('cap-${i}', true)" class="text-zinc-500 hover:text-white shrink-0"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
+
+            const ctasList = document.getElementById('ai-ctas-list');
+            ctasList.innerHTML = data.ctas.map(cta => `<li class="flex items-center gap-2"><i data-lucide="arrow-right" class="w-4 h-4 text-electricBlue"></i> ${cta}</li>`).join('');
+
+            document.getElementById('ai-hashtags-text').textContent = data.hashtags.join(' ');
+
+            document.getElementById('ai-results').classList.remove('hidden');
+            lucide.createIcons({root: document.getElementById('ai-results')});
+        }
+
+        // Util: Copy to clipboard
+        window.copyToClipboard = function(elementId, isTextContent = false) {
+            const el = document.getElementById(elementId);
+            const text = el.tagName === 'TEXTAREA' ? el.value : el.innerText;
+            
+            try {
+                // Fallback for iframe environments
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("Copy");
+                textArea.remove();
+                showToast("Copiado para a área de transferência!");
+            } catch (err) {
+                showToast("Erro ao copiar.", "error");
+            }
+        }
+
+        // Fabric.js Editor
+        function initFabric() {
+            // Set base dimensions 800x800 for high quality export
+            canvas = new fabric.Canvas('fabric-canvas', {
+                width: 800,
+                height: 800,
+                backgroundColor: '#ffffff',
+                preserveObjectStacking: true
+            });
+
+            // Handle Selection Events for Property Panel
+            canvas.on('selection:created', updatePropertyPanel);
+            canvas.on('selection:updated', updatePropertyPanel);
+            canvas.on('selection:cleared', clearPropertyPanel);
+
+            // Inputs event listeners for real-time updates
+            document.getElementById('element-color').addEventListener('input', (e) => {
+                const activeObj = canvas.getActiveObject();
+                if (!activeObj) return;
+                
+                if (activeObj.type === 'i-text') {
+                    activeObj.set('fill', e.target.value);
+                } else {
+                    activeObj.set('fill', e.target.value);
+                }
+                canvas.requestRenderAll();
+            });
+
+            document.getElementById('element-text').addEventListener('input', (e) => {
+                const activeObj = canvas.getActiveObject();
+                if (activeObj && activeObj.type === 'i-text') {
+                    activeObj.set('text', e.target.value);
+                    canvas.requestRenderAll();
+                }
+            });
+
+            // Handle local image upload via button
+            document.getElementById('canvas-image-upload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(f) {
+                    const data = f.target.result;
+                    fabric.Image.fromURL(data, function(img) {
+                        // Scale down if too large
+                        if (img.width > 600) {
+                            img.scaleToWidth(600);
+                        }
+                        img.set({
+                            left: 100,
+                            top: 100
+                        });
+                        canvas.add(img);
+                        canvas.setActiveObject(img);
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Resize visual representation without losing internal 800x800 resolution
+        function resizeCanvas() {
+            const wrapper = document.querySelector('.canvas-container-wrapper');
+            if (!wrapper || !canvas) return;
+            
+            const outerWidth = wrapper.clientWidth;
+            // Internal logic dimensions
+            const logicalWidth = 800;
+            const scale = outerWidth / logicalWidth;
+            
+            // Use CSS transform to scale the canvas visual size to fit wrapper
+            const canvasContainer = document.querySelector('.canvas-container');
+            if (canvasContainer) {
+                canvasContainer.style.transformOrigin = 'top left';
+                canvasContainer.style.transform = `scale(${scale})`;
+                // Maintain container height
+                wrapper.style.height = `${outerWidth}px`; 
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Editor Toolbar Actions
+        window.addText = function() {
+            const text = new fabric.IText('Novo Texto', {
+                left: 300,
+                top: 300,
+                fontFamily: 'Inter',
+                fill: '#000000',
+                fontSize: 48,
+                fontWeight: 'bold'
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+        }
+
+        window.addRect = function() {
+            const rect = new fabric.Rect({
+                left: 100,
+                top: 100,
+                fill: '#ff0000',
+                width: 200,
+                height: 60,
+                rx: 10, // Rounded corners
+                ry: 10
+            });
+            canvas.add(rect);
+            canvas.setActiveObject(rect);
+        }
+
+        window.addCircle = function() {
+            const circle = new fabric.Circle({
+                left: 200,
+                top: 200,
+                fill: '#ffcc00',
+                radius: 60
+            });
+            canvas.add(circle);
+            canvas.setActiveObject(circle);
+        }
+
+        window.uploadImageToCanvas = function() {
+            document.getElementById('canvas-image-upload').click();
+        }
+
+        window.deleteSelected = function() {
+            const activeObjects = canvas.getActiveObjects();
+            if (activeObjects.length) {
+                canvas.discardActiveObject();
+                activeObjects.forEach(function(object) {
+                    canvas.remove(object);
+                });
+            }
+        }
+
+        window.loadProductImageToEditor = function() {
+            const productId = document.getElementById('editor-product-select').value;
+            if (!productId) return;
+            
+            const product = globalProducts.find(p => p.id === productId);
+            if (!product || !product.imageUrl) return;
+
+            // Load via CORS proxy or directly (assuming images allow cross-origin for canvas drawing)
+            // Note: Canvas tainting might occur if image host doesn't send CORS headers, preventing export.
+            // For SaaS, usually images are uploaded or proxied. We'll set crossOrigin.
+            fabric.Image.fromURL(product.imageUrl, function(img) {
+                if(img) {
+                    if (img.width > 600) img.scaleToWidth(600);
+                    img.set({ left: 100, top: 100 });
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+
+                    // Add a price tag automatically
+                    const priceText = new fabric.IText(`R$ ${product.price}`, {
+                        left: 100, top: 50,
+                        fontFamily: 'Inter',
+                        fill: '#ff0000',
+                        fontSize: 64,
+                        fontWeight: 'bold'
+                    });
+                    canvas.add(priceText);
+                } else {
+                    showToast("Erro ao carregar imagem. Verifique a URL.", "error");
+                }
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        window.downloadDesign = function() {
+            if (!canvas) return;
+            // Clear selection before export
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+            
+            try {
+                const dataURL = canvas.toDataURL({
+                    format: 'png',
+                    quality: 1,
+                    multiplier: 1 // Since canvas is internally 800x800
+                });
+                
+                const link = document.createElement('a');
+                link.download = 'afiliado-studio-arte.png';
+                link.href = dataURL;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("Arte exportada com sucesso!");
+            } catch (e) {
+                // Usually CORS issue with external images
+                console.error(e);
+                showToast("Erro ao exportar. Possível bloqueio CORS da imagem original. Use upload manual.", "error");
+            }
+        }
+
+        // Property Panel Logic
+        function updatePropertyPanel(e) {
+            const activeObj = e.selected[0]; // Assuming single selection for simplicity
+            if (!activeObj) return;
+
+            document.getElementById('no-selection-msg').classList.add('hidden');
+            
+            // Color Picker
+            const colorContainer = document.getElementById('color-picker-container');
+            colorContainer.classList.remove('hidden');
+            document.getElementById('element-color').value = activeObj.fill || '#000000';
+
+            // Text Edit
+            const textContainer = document.getElementById('text-edit-container');
+            if (activeObj.type === 'i-text') {
+                textContainer.classList.remove('hidden');
+                document.getElementById('element-text').value = activeObj.text;
+            } else {
+                textContainer.classList.add('hidden');
+            }
+        }
+
+        function clearPropertyPanel() {
+            document.getElementById('no-selection-msg').classList.remove('hidden');
+            document.getElementById('color-picker-container').classList.add('hidden');
+            document.getElementById('text-edit-container').classList.add('hidden');
+        }
+
+        // Vitrine (Showcase) Export Logic
+        function updateVitrinePreview() {
+            const grid = document.getElementById('vitrine-preview-grid');
+            if (globalProducts.length === 0) {
+                grid.innerHTML = '<p class="text-sm text-zinc-500 col-span-full">Adicione produtos para ver na vitrine.</p>';
+                return;
+            }
+
+            grid.innerHTML = globalProducts.map(p => `
+                <div class="bg-zinc-900 rounded overflow-hidden aspect-square relative border border-zinc-700">
+                    <img src="${p.imageUrl}" class="w-full h-full object-cover">
+                </div>
+            `).join('');
+        }
+
+        window.exportVitrineHTML = function() {
+            if (globalProducts.length === 0) {
+                showToast("Adicione produtos antes de gerar a vitrine.", "error");
+                return;
+            }
+
+            const htmlTemplate = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Ofertas Selecionadas</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        body { background-color: #f8fafc; font-family: sans-serif; }
+        .product-card { transition: transform 0.2s; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <header class="bg-white shadow-sm py-6 mb-8 text-center">
+        <h1 class="text-3xl font-bold text-slate-800">Minhas Ofertas Selecionadas</h1>
+        <p class="text-slate-500 mt-2">Os melhores produtos com os melhores preços!</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 pb-12">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            ${globalProducts.map(p => `
+            <!-- Product Card -->
+            <div class="product-card bg-white rounded-xl overflow-hidden border border-slate-100 flex flex-col h-full">
+                <div class="h-48 overflow-hidden bg-slate-50 flex items-center justify-center">
+                    <img src="${p.imageUrl}" alt="${p.name}" class="w-full h-full object-contain p-2" onerror="this.src='https://placehold.co/400x400/f1f5f9/94a3b8?text=Sem+Imagem'">
+                </div>
+                <div class="p-4 flex flex-col flex-1">
+                    <h2 class="font-semibold text-slate-700 mb-2 line-clamp-2">${p.name}</h2>
+                    <div class="mt-auto">
+                        <p class="text-xl font-bold text-blue-600 mb-3">R$ ${p.price}</p>
+                        <a href="${p.link}" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors">
+                            Comprar com Desconto
+                        </a>
+                    </div>
+                </div>
+            </div>
+            `).join('')}
+        </div>
+    </main>
+    <footer class="text-center py-6 text-slate-400 text-sm">
+        Gerado com Afiliado Studio AI
+    </footer>
+</body>
+</html>`;
+
+            document.getElementById('export-code-area').value = htmlTemplate;
+            document.getElementById('code-modal').classList.remove('hidden');
+        }
+
+        // Init the whole app
+        window.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
